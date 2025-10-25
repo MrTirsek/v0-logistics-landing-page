@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState } from "react"
-import { XCircle, Package, Truck } from "lucide-react"
+import { XCircle, Package, Truck, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -18,10 +18,56 @@ export default function SeteRotasLanding() {
     need: "",
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitStatus, setSubmitStatus] = useState<{
+    type: "success" | "error" | null
+    message: string
+  }>({ type: null, message: "" })
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle form submission
-    console.log("Form submitted:", formData)
+    setIsSubmitting(true)
+    setSubmitStatus({ type: null, message: "" })
+
+    try {
+      const response = await fetch("/api/form", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setSubmitStatus({
+          type: "success",
+          message: "Obrigado! Recebemos seu contato e entraremos em contato em breve.",
+        })
+        // Reset form
+        setFormData({
+          name: "",
+          whatsapp: "",
+          storeName: "",
+          segment: "",
+          need: "",
+        })
+      } else {
+        setSubmitStatus({
+          type: "error",
+          message: data.error || "Erro ao enviar formulário. Tente novamente.",
+        })
+      }
+    } catch (error) {
+      console.error("Erro ao enviar formulário:", error)
+      setSubmitStatus({
+        type: "error",
+        message: "Erro ao enviar formulário. Verifique sua conexão e tente novamente.",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -217,6 +263,23 @@ export default function SeteRotasLanding() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6 rounded-xl bg-white p-8 shadow-2xl text-foreground">
+            {submitStatus.type && (
+              <div
+                className={`flex items-center gap-3 rounded-lg p-4 ${
+                  submitStatus.type === "success"
+                    ? "bg-green-50 text-green-800 border border-green-200"
+                    : "bg-red-50 text-red-800 border border-red-200"
+                }`}
+              >
+                {submitStatus.type === "success" ? (
+                  <CheckCircle className="h-5 w-5 flex-shrink-0" />
+                ) : (
+                  <XCircle className="h-5 w-5 flex-shrink-0" />
+                )}
+                <p className="text-sm font-medium">{submitStatus.message}</p>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="name" className="text-gray-700">
                 Nome *
@@ -296,10 +359,13 @@ export default function SeteRotasLanding() {
             <Button
               type="submit"
               size="lg"
-              className="w-full bg-[#DC2626] px-4 py-6 text-base md:text-lg font-semibold text-white transition-all hover:bg-[#B91C1C] hover:scale-105 leading-tight"
+              disabled={isSubmitting}
+              className="w-full bg-[#DC2626] px-4 py-6 text-base md:text-lg font-semibold text-white transition-all hover:bg-[#B91C1C] hover:scale-105 leading-tight disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <span className="block sm:hidden">Receber Orçamento</span>
-              <span className="hidden sm:block">Receber meu Orçamento Personalizado</span>
+              <span className="block sm:hidden">{isSubmitting ? "Enviando..." : "Receber Orçamento"}</span>
+              <span className="hidden sm:block">
+                {isSubmitting ? "Enviando..." : "Receber meu Orçamento Personalizado"}
+              </span>
             </Button>
           </form>
         </div>
